@@ -1,0 +1,6 @@
+{
+  "name": "Borrower Copilot",
+  "description": "Know what you can safely borrow before you talk to a lender. Self-assessment for Indian borrowers with safe limits, fair rates, and a negotiation card.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
