@@ -60,75 +60,69 @@ export interface QuestionDefinition {
   validation?: (value: any, answers: QuestionnaireAnswers) => string | null;
 }
 
+import { DataPoint, RangePoint } from '../types';
+
 export interface QuestionnaireAnswers {
   // Must questions
-  purpose?: LoanPurpose;
-  loanType?: LoanType;
-  amountRequested?: number;
-  tenureWantedMonths?: number;
-  age?: number;
-  employmentType?: EmploymentType;
-  monthlyNetIncome?: number;
-  incomeStability?: 'very_stable' | 'moderately_stable' | 'variable';
-  existingMonthlyEMIs?: number;
-  householdExpenses?: number;
-  creditScoreKnown?: boolean;
-  creditScore?: number;
+  purpose?: DataPoint<LoanPurpose>;
+  loanType?: DataPoint<LoanType>;
+  amountRequested?: DataPoint<number>;
+  tenureWantedMonths?: DataPoint<number>;
+  age?: DataPoint<number>;
+  employmentType?: DataPoint<EmploymentType>;
+  monthlyNetIncome?: RangePoint<number>;
+  incomeStability?: DataPoint<'very_stable' | 'moderately_stable' | 'variable'>;
+  existingMonthlyEMIs?: DataPoint<number>;
+  householdExpenses?: DataPoint<number>;
+  creditScoreKnown?: DataPoint<boolean>;
+  creditScore?: DataPoint<number>;
 
   // Adaptive: Co-applicant
-  hasCoapplicant?: boolean;
-  spouseIncome?: number;
+  hasCoapplicant?: DataPoint<boolean>;
+  spouseIncome?: DataPoint<number>;
 
   // Adaptive: Salaried path
-  yearsAtEmployer?: 'less_than_1_yr' | '1_to_3_yrs' | 'more_than_3_yrs';
-  hasVariableIncome?: boolean;
-  variableIncomePercent?: number;
-  hasUpcomingExpenseRisk?: boolean;
+  yearsAtEmployer?: DataPoint<'less_than_1_yr' | '1_to_3_yrs' | 'more_than_3_yrs'>;
+  hasVariableIncome?: DataPoint<boolean>;
+  variableIncomePercent?: DataPoint<number>;
+  hasUpcomingExpenseRisk?: DataPoint<boolean>;
 
   // Adaptive: Self-employed path
-  businessVintageYears?: 'less_than_2_yrs' | '2_to_5_yrs' | 'more_than_5_yrs';
-  documentedAnnualIncome?: number;
-  businessVariablePercent?: 'low_under_20' | 'moderate_20_50' | 'high_over_50';
-  hasBusinessDebt?: boolean;
+  businessVintageYears?: DataPoint<'less_than_2_yrs' | '2_to_5_yrs' | 'more_than_5_yrs'>;
+  documentedAnnualIncome?: DataPoint<number>;
+  businessVariablePercent?: DataPoint<'low_under_20' | 'moderate_20_50' | 'high_over_50'>;
+  hasBusinessDebt?: DataPoint<boolean>;
 
   // Adaptive: Informal / Gig path
-  lowestMonthlyIncome?: number;
-  incomeSourceCount?: 'single_source' | '2_to_3_sources' | '4_or_more';
-  hasAppLoans?: boolean;
+  lowestMonthlyIncome?: DataPoint<number>;
+  incomeSourceCount?: DataPoint<'single_source' | '2_to_3_sources' | '4_or_more'>;
+  hasAppLoans?: DataPoint<boolean>;
 
   // Adaptive: Existing obligations & credit
-  hasExistingLoans?: boolean;
-  hasBounce?: boolean;
-  hasRecentMissedPayments?: boolean;
-  recentCreditInquiries?: 'none' | '1_to_2' | '3_or_more';
+  hasExistingLoans?: DataPoint<boolean>;
+  hasBounce?: DataPoint<boolean>;
+  hasRecentMissedPayments?: DataPoint<boolean>;
+  recentCreditInquiries?: DataPoint<'none' | '1_to_2' | '3_or_more'>;
 
   // Adaptive: Affordability & Savings
-  rentExpense?: number;
-  emergencySavingsMonths?:
-    | 'less_than_1_mo'
-    | '1_to_3_mo'
-    | '3_to_6_mo'
-    | 'more_than_6_mo'
-    | 'unknown';
+  rentExpense?: DataPoint<number>;
+  emergencySavingsMonths?: DataPoint<'less_than_1_mo' | '1_to_3_mo' | '3_to_6_mo' | 'more_than_6_mo' | 'unknown'>;
 
   // Adaptive: Collateral & Productive
-  expectedAdditionalIncome?: number;
-  hasCollateral?: boolean;
-  collateralType?: 'commercial_shop' | 'residential_property' | 'vehicle' | 'gold' | 'other';
-  collateralValue?: number;
-  collateralDescription?: string;
+  expectedAdditionalIncome?: DataPoint<number>;
+  hasCollateral?: DataPoint<boolean>;
+  collateralType?: DataPoint<'commercial_shop' | 'residential_property' | 'vehicle' | 'gold' | 'other'>;
+  collateralValue?: DataPoint<number>;
+  collateralDescription?: DataPoint<string>;
 
   // Adaptive: Lender Offer (Negotiation card feed)
-  hasLenderOffer?: 'no' | 'yes' | 'comparing';
-  quotedAmount?: number;
-  quotedRate?: number;
-  quotedFee?: number;
-  quotedTenure?: number;
-  quotedEMI?: number;
-  quotedOtherCharges?: number;
-
-  // Unknown state tracking
-  unknownFields?: Record<string, boolean>;
+  hasLenderOffer?: DataPoint<'no' | 'yes' | 'comparing'>;
+  quotedAmount?: DataPoint<number>;
+  quotedRate?: DataPoint<number>;
+  quotedFee?: DataPoint<number>;
+  quotedTenure?: DataPoint<number>;
+  quotedEMI?: DataPoint<number>;
+  quotedOtherCharges?: DataPoint<number>;
 
   // Metadata
   personaId?: string;

@@ -5,13 +5,20 @@
  * Architecture Note: Zero React/JSX dependency.
  */
 
-import { BorrowerInput } from '../types';
+import { BorrowerInput, DataPoint, RangePoint } from '../types';
 import { QUESTION_DEFINITIONS, QUESTIONNAIRE_STEPS } from './questions';
 import {
   QuestionDefinition,
   QuestionnaireAnswers,
   StepDefinition,
 } from './types';
+
+function unwrap<T>(point?: DataPoint<T> | RangePoint<T>): T | undefined {
+  if (!point) return undefined;
+  if (point.status === 'known') return point.value;
+  if (point.status === 'range') return ((point.min as any as number) + (point.max as any as number)) / 2 as any as T;
+  return undefined;
+}
 
 /**
  * Evaluates whether a question should be displayed given current borrower answers.
@@ -99,21 +106,21 @@ export function cleanIrrelevantAnswers(
   }
 
   // Handle explicit unknown overrides
-  if (answers.creditScoreKnown === false) {
+  if (answers.creditScoreKnown?.status === 'known' && answers.creditScoreKnown.value === false) {
     cleaned.creditScore = undefined;
   }
 
-  if (answers.hasCoapplicant === false) {
+  if (answers.hasCoapplicant?.status === 'known' && answers.hasCoapplicant.value === false) {
     cleaned.spouseIncome = undefined;
   }
 
-  if (answers.hasCollateral === false) {
+  if (answers.hasCollateral?.status === 'known' && answers.hasCollateral.value === false) {
     cleaned.collateralType = undefined;
     cleaned.collateralValue = undefined;
     cleaned.collateralDescription = undefined;
   }
 
-  if (answers.hasLenderOffer === 'no') {
+  if (answers.hasLenderOffer?.status === 'known' && answers.hasLenderOffer.value === 'no') {
     cleaned.quotedRate = undefined;
     cleaned.quotedFee = undefined;
     cleaned.quotedEMI = undefined;
@@ -167,8 +174,8 @@ export function mapAnswersToBorrowerInput(
 ): BorrowerInput {
   const answers = cleanIrrelevantAnswers(rawAnswers);
 
-  let collateralDesc = answers.collateralDescription;
-  if (answers.hasCollateral && answers.collateralType && !collateralDesc) {
+  let collateralDesc = unwrap(answers.collateralDescription);
+  if (unwrap(answers.hasCollateral) && unwrap(answers.collateralType) && !collateralDesc) {
     const typeNames: Record<string, string> = {
       commercial_shop: 'Commercial shop / office premises',
       residential_property: 'Residential house / plot',
@@ -176,44 +183,44 @@ export function mapAnswersToBorrowerInput(
       gold: 'Physical gold jewellery',
       other: 'Financial asset or property',
     };
-    collateralDesc = typeNames[answers.collateralType] || 'Pledged collateral asset';
+    collateralDesc = typeNames[unwrap(answers.collateralType)!] || 'Pledged collateral asset';
   }
 
   const borrowerInput: BorrowerInput = {
     personaId: answers.personaId,
     name: answers.name || 'Borrower',
-    age: answers.age,
-    purpose: answers.purpose,
-    amountRequested: answers.amountRequested,
-    loanType: answers.loanType,
-    monthlyNetIncome: answers.monthlyNetIncome,
-    spouseIncome: answers.spouseIncome,
-    employmentType: answers.employmentType,
-    existingMonthlyEMIs: answers.existingMonthlyEMIs || 0,
-    householdExpenses: answers.householdExpenses,
-    creditScoreKnown: answers.creditScoreKnown,
-    creditScore: answers.creditScoreKnown ? answers.creditScore : undefined,
-    hasCollateral: answers.hasCollateral || false,
-    collateralValue: answers.collateralValue,
+    age: unwrap(answers.age),
+    purpose: unwrap(answers.purpose),
+    amountRequested: unwrap(answers.amountRequested),
+    loanType: unwrap(answers.loanType),
+    monthlyNetIncome: unwrap(answers.monthlyNetIncome),
+    spouseIncome: unwrap(answers.spouseIncome),
+    employmentType: unwrap(answers.employmentType),
+    existingMonthlyEMIs: unwrap(answers.existingMonthlyEMIs) || 0,
+    householdExpenses: unwrap(answers.householdExpenses),
+    creditScoreKnown: unwrap(answers.creditScoreKnown),
+    creditScore: unwrap(answers.creditScoreKnown) ? unwrap(answers.creditScore) : undefined,
+    hasCollateral: unwrap(answers.hasCollateral) || false,
+    collateralValue: unwrap(answers.collateralValue),
     collateralDescription: collateralDesc,
-    hasAppLoans: answers.hasAppLoans || false,
-    hasBounce: answers.hasBounce || false,
-    tenureWantedMonths: answers.tenureWantedMonths || 36,
-    hasLenderOffer: answers.hasLenderOffer === 'yes' || answers.hasLenderOffer === 'comparing',
-    quotedAmount: answers.quotedAmount,
-    quotedRate: answers.quotedRate,
-    quotedFee: answers.quotedFee,
-    quotedTenure: answers.quotedTenure,
-    quotedEMI: answers.quotedEMI,
-    quotedOtherCharges: answers.quotedOtherCharges,
+    hasAppLoans: unwrap(answers.hasAppLoans) || false,
+    hasBounce: unwrap(answers.hasBounce) || false,
+    tenureWantedMonths: unwrap(answers.tenureWantedMonths) || 36,
+    hasLenderOffer: unwrap(answers.hasLenderOffer) === 'yes' || unwrap(answers.hasLenderOffer) === 'comparing',
+    quotedAmount: unwrap(answers.quotedAmount),
+    quotedRate: unwrap(answers.quotedRate),
+    quotedFee: unwrap(answers.quotedFee),
+    quotedTenure: unwrap(answers.quotedTenure),
+    quotedEMI: unwrap(answers.quotedEMI),
+    quotedOtherCharges: unwrap(answers.quotedOtherCharges),
     lenderOffer: {
-      hasOffer: answers.hasLenderOffer === 'yes' || answers.hasLenderOffer === 'comparing',
-      quotedAmount: answers.quotedAmount,
-      quotedRate: answers.quotedRate,
-      quotedFee: answers.quotedFee,
-      quotedTenure: answers.quotedTenure,
-      quotedEMI: answers.quotedEMI,
-      quotedOtherCharges: answers.quotedOtherCharges,
+      hasOffer: unwrap(answers.hasLenderOffer) === 'yes' || unwrap(answers.hasLenderOffer) === 'comparing',
+      quotedAmount: unwrap(answers.quotedAmount),
+      quotedRate: unwrap(answers.quotedRate),
+      quotedFee: unwrap(answers.quotedFee),
+      quotedTenure: unwrap(answers.quotedTenure),
+      quotedEMI: unwrap(answers.quotedEMI),
+      quotedOtherCharges: unwrap(answers.quotedOtherCharges),
     },
   };
 
@@ -227,59 +234,63 @@ export function mapAnswersToBorrowerInput(
 export function mapBorrowerInputToAnswers(
   input: BorrowerInput
 ): QuestionnaireAnswers {
+  const wrap = <T>(val: T | undefined): DataPoint<T> | undefined => val !== undefined ? { status: 'known', value: val } : undefined;
+
   const answers: QuestionnaireAnswers = {
     personaId: input.personaId,
     name: input.name,
-    age: input.age,
-    purpose: input.purpose,
-    loanType: input.loanType,
-    amountRequested: input.amountRequested,
-    tenureWantedMonths: input.tenureWantedMonths || 36,
-    employmentType: input.employmentType,
-    monthlyNetIncome: input.monthlyNetIncome,
-    incomeStability:
+    age: wrap(input.age),
+    purpose: wrap(input.purpose),
+    loanType: wrap(input.loanType),
+    amountRequested: wrap(input.amountRequested),
+    tenureWantedMonths: wrap(input.tenureWantedMonths || 36),
+    employmentType: wrap(input.employmentType),
+    monthlyNetIncome: wrap(input.monthlyNetIncome),
+    incomeStability: wrap(
       input.employmentType === 'salaried_corporate'
         ? 'very_stable'
         : input.employmentType === 'informal_or_gig'
         ? 'variable'
-        : 'moderately_stable',
-    existingMonthlyEMIs: input.existingMonthlyEMIs,
-    householdExpenses: input.householdExpenses,
-    creditScoreKnown: input.creditScoreKnown !== false && input.creditScore !== undefined,
-    creditScore: input.creditScore,
-    hasCoapplicant: (input.spouseIncome || 0) > 0,
-    spouseIncome: input.spouseIncome,
-    hasCollateral: input.hasCollateral || false,
-    collateralValue: input.collateralValue,
-    collateralDescription: input.collateralDescription,
-    hasAppLoans: input.hasAppLoans || false,
-    hasBounce: input.hasBounce || false,
-    hasExistingLoans: (input.existingMonthlyEMIs || 0) > 0,
-    hasLenderOffer:
+        : 'moderately_stable'
+    ),
+    existingMonthlyEMIs: wrap(input.existingMonthlyEMIs),
+    householdExpenses: wrap(input.householdExpenses),
+    creditScoreKnown: wrap(input.creditScoreKnown !== false && input.creditScore !== undefined),
+    creditScore: wrap(input.creditScore),
+    hasCoapplicant: wrap((input.spouseIncome || 0) > 0),
+    spouseIncome: wrap(input.spouseIncome),
+    hasCollateral: wrap(input.hasCollateral || false),
+    collateralValue: wrap(input.collateralValue),
+    collateralDescription: wrap(input.collateralDescription),
+    hasAppLoans: wrap(input.hasAppLoans || false),
+    hasBounce: wrap(input.hasBounce || false),
+    hasExistingLoans: wrap((input.existingMonthlyEMIs || 0) > 0),
+    hasLenderOffer: wrap(
       input.hasLenderOffer || input.quotedRate !== undefined || input.lenderOffer?.hasOffer
         ? 'yes'
-        : 'no',
-    quotedAmount: input.quotedAmount ?? input.lenderOffer?.quotedAmount,
-    quotedRate: input.quotedRate ?? input.lenderOffer?.quotedRate,
-    quotedFee: input.quotedFee ?? input.lenderOffer?.quotedFee,
-    quotedTenure: input.quotedTenure ?? input.lenderOffer?.quotedTenure,
-    quotedEMI: input.quotedEMI ?? input.lenderOffer?.quotedEMI,
-    quotedOtherCharges: input.quotedOtherCharges ?? input.lenderOffer?.quotedOtherCharges,
+        : 'no'
+    ),
+    quotedAmount: wrap(input.quotedAmount ?? input.lenderOffer?.quotedAmount),
+    quotedRate: wrap(input.quotedRate ?? input.lenderOffer?.quotedRate),
+    quotedFee: wrap(input.quotedFee ?? input.lenderOffer?.quotedFee),
+    quotedTenure: wrap(input.quotedTenure ?? input.lenderOffer?.quotedTenure),
+    quotedEMI: wrap(input.quotedEMI ?? input.lenderOffer?.quotedEMI),
+    quotedOtherCharges: wrap(input.quotedOtherCharges ?? input.lenderOffer?.quotedOtherCharges),
   };
 
   // Specific persona enrichments
   if (input.personaId === 'priya') {
-    answers.yearsAtEmployer = 'more_than_3_yrs';
-    answers.emergencySavingsMonths = '3_to_6_mo';
+    answers.yearsAtEmployer = { status: 'known', value: 'more_than_3_yrs' };
+    answers.emergencySavingsMonths = { status: 'known', value: '3_to_6_mo' };
   } else if (input.personaId === 'ravi') {
-    answers.businessVintageYears = 'more_than_5_yrs';
-    answers.documentedAnnualIncome = 420000;
-    answers.collateralType = 'commercial_shop';
-    answers.emergencySavingsMonths = '1_to_3_mo';
+    answers.businessVintageYears = { status: 'known', value: 'more_than_5_yrs' };
+    answers.documentedAnnualIncome = { status: 'known', value: 420000 };
+    answers.collateralType = { status: 'known', value: 'commercial_shop' };
+    answers.emergencySavingsMonths = { status: 'known', value: '1_to_3_mo' };
   } else if (input.personaId === 'anita') {
-    answers.lowestMonthlyIncome = 22000;
-    answers.incomeSourceCount = '2_to_3_sources';
-    answers.emergencySavingsMonths = 'less_than_1_mo';
+    answers.lowestMonthlyIncome = { status: 'known', value: 22000 };
+    answers.incomeSourceCount = { status: 'known', value: '2_to_3_sources' };
+    answers.emergencySavingsMonths = { status: 'known', value: 'less_than_1_mo' };
   }
 
   return answers;

@@ -31,6 +31,71 @@ export type VerdictStatus = 'borrow' | 'borrow_less' | 'dont_borrow';
 
 export type ConfidenceLevel = 'high' | 'moderate' | 'indicative';
 
+export type Known<T> = { status: 'known'; value: T };
+export type Unknown = { status: 'unknown' };
+export type Range<T> = { status: 'range'; min: T; max: T };
+export type DataPoint<T> = Known<T> | Unknown;
+export type RangePoint<T> = Known<T> | Range<T> | Unknown;
+
+export interface BorrowerProfile {
+  // PERSONAL
+  personaId?: string;
+  name?: string;
+  location?: DataPoint<string>;
+  age?: DataPoint<number>;
+
+  // INCOME
+  employmentType?: DataPoint<EmploymentType>;
+  monthlyNetIncome?: RangePoint<number>;
+  incomeStability?: DataPoint<'very_stable' | 'moderately_stable' | 'variable'>;
+  variableIncomePercentage?: DataPoint<number>;
+  documentedAnnualIncome?: DataPoint<number>;
+
+  // OBLIGATIONS
+  existingMonthlyEMIs?: DataPoint<number>;
+  existingLoans?: DataPoint<boolean>;
+  householdExpenses?: DataPoint<number>;
+  upcomingLargeExpenses?: DataPoint<boolean>;
+
+  // CREDIT
+  creditScore?: DataPoint<number>;
+  creditScoreKnown?: DataPoint<boolean>;
+  repaymentHistory?: DataPoint<'clean' | 'missed_payments' | 'bounce'>;
+  recentBounces?: DataPoint<boolean>;
+  creditUtilisation?: DataPoint<number>;
+
+  // LOAN
+  loanType?: DataPoint<LoanType>;
+  requestedAmount?: DataPoint<number>;
+  requestedTenure?: DataPoint<number>;
+  loanPurpose?: DataPoint<LoanPurpose>;
+
+  // PRODUCTIVE USE
+  expectedAdditionalMonthlyIncome?: DataPoint<number>;
+
+  // COLLATERAL
+  hasCollateral?: DataPoint<boolean>;
+  collateralType?: DataPoint<'commercial_shop' | 'residential_property' | 'vehicle' | 'gold' | 'other'>;
+  collateralValue?: DataPoint<number>;
+  collateralEncumbered?: DataPoint<boolean>;
+
+  // CO-APPLICANT
+  hasCoApplicant?: DataPoint<boolean>;
+  coApplicantIncome?: DataPoint<number>;
+
+  // SAVINGS
+  emergencySavingsMonths?: DataPoint<'less_than_1_mo' | '1_to_3_mo' | '3_to_6_mo' | 'more_than_6_mo' | 'unknown'>;
+
+  // LENDER OFFER
+  hasLenderOffer?: DataPoint<'no' | 'yes' | 'comparing'>;
+  quotedAmount?: DataPoint<number>;
+  quotedInterestRate?: DataPoint<number>;
+  processingFee?: DataPoint<number>;
+  quotedEMI?: DataPoint<number>;
+  quotedTenure?: DataPoint<number>;
+  otherMandatoryCharges?: DataPoint<number>;
+}
+
 export interface BorrowerInput {
   personaId?: string;
   name?: string;
@@ -62,6 +127,7 @@ export interface BorrowerInput {
   lenderOffer?: LenderOfferInput;
   emergencySavingsMonths?: string;
 }
+
 
 export interface LenderOfferInput {
   hasOffer?: boolean;
