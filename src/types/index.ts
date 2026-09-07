@@ -268,7 +268,7 @@ export interface AssessmentOutput {
   // Explanations & Negotiation points
   reasons: string[];
   negotiationPoints: string[];
-  negotiation?: NegotiationGuidance;
+  negotiation: NegotiationGuidance;
 
   // Phase 5 Structured Pipeline Properties
   requestedAmount?: number;

@@ -6,7 +6,7 @@
 
 import { ConfidenceLevel } from '../types';
 import { QuestionnaireAnswers } from './types';
-import { cleanIrrelevantAnswers } from './questionVisibility';
+import { cleanIrrelevantAnswers, unwrap } from './questionVisibility';
 
 export interface QuestionnaireConfidenceResult {
   score: number;
@@ -30,16 +30,29 @@ export function evaluateQuestionnaireConfidence(
   const knownFactors: string[] = [];
   const missingFactors: string[] = [];
 
+  const monthlyNetIncome = unwrap<number>(answers.monthlyNetIncome);
+  const householdExpenses = unwrap<number>(answers.householdExpenses);
+  const creditScoreKnown = unwrap<boolean>(answers.creditScoreKnown);
+  const creditScore = unwrap<number>(answers.creditScore);
+  const incomeStability = unwrap<string>(answers.incomeStability);
+  const employmentType = unwrap<string>(answers.employmentType);
+  const yearsAtEmployer = unwrap<string>(answers.yearsAtEmployer);
+  const documentedAnnualIncome = unwrap<number>(answers.documentedAnnualIncome);
+  const businessVintageYears = unwrap<string>(answers.businessVintageYears);
+  const lowestMonthlyIncome = unwrap<number>(answers.lowestMonthlyIncome);
+  const hasBounce = unwrap<boolean>(answers.hasBounce);
+  const emergencySavingsMonths = unwrap<string>(answers.emergencySavingsMonths);
+
   // Core Net Income
-  if (answers.monthlyNetIncome && answers.monthlyNetIncome > 0) {
+  if (monthlyNetIncome && monthlyNetIncome > 0) {
     score += 15;
-    knownFactors.push(`Net monthly cash flow verified (₹${answers.monthlyNetIncome.toLocaleString('en-IN')})`);
+    knownFactors.push(`Net monthly cash flow verified (₹${monthlyNetIncome.toLocaleString('en-IN')})`);
   } else {
     missingFactors.push('Net monthly earnings unstated');
   }
 
   // Living Expenses
-  if (answers.householdExpenses !== undefined && answers.householdExpenses > 0) {
+  if (householdExpenses !== undefined && householdExpenses > 0) {
     score += 15;
     knownFactors.push('Household living expense budget documented');
   } else {
@@ -48,46 +61,46 @@ export function evaluateQuestionnaireConfidence(
   }
 
   // Credit Score
-  if (answers.creditScoreKnown && answers.creditScore) {
+  if (creditScoreKnown && creditScore) {
     score += 20;
-    knownFactors.push(`Verified bureau credit score provided (${answers.creditScore})`);
+    knownFactors.push(`Verified bureau credit score provided (${creditScore})`);
   } else {
     missingFactors.push('Credit score unverified (proxy evaluation applied)');
   }
 
   // Income Stability
-  if (answers.incomeStability) {
+  if (incomeStability) {
     score += 5;
-    knownFactors.push(`Income stability classified as ${answers.incomeStability.replace('_', ' ')}`);
+    knownFactors.push(`Income stability classified as ${incomeStability.replace('_', ' ')}`);
   }
 
   // Employment specifics
   if (
-    answers.employmentType === 'salaried_corporate' ||
-    answers.employmentType === 'salaried_regular'
+    employmentType === 'salaried_corporate' ||
+    employmentType === 'salaried_regular'
   ) {
-    if (answers.yearsAtEmployer) {
+    if (yearsAtEmployer) {
       score += 5;
       knownFactors.push('Employer tenure confirmed');
     } else {
       missingFactors.push('Employer tenure unstated');
     }
   } else if (
-    answers.employmentType === 'self_employed_business' ||
-    answers.employmentType === 'self_employed_professional'
+    employmentType === 'self_employed_business' ||
+    employmentType === 'self_employed_professional'
   ) {
-    if (answers.documentedAnnualIncome) {
+    if (documentedAnnualIncome) {
       score += 10;
       knownFactors.push('Documented ITR tax returns provided');
     } else {
       missingFactors.push('ITR / tax returns unavailable (evaluated on cash flow)');
     }
-    if (answers.businessVintageYears) {
+    if (businessVintageYears) {
       score += 5;
       knownFactors.push('Business vintage confirmed');
     }
-  } else if (answers.employmentType === 'informal_or_gig') {
-    if (answers.lowestMonthlyIncome) {
+  } else if (employmentType === 'informal_or_gig') {
+    if (lowestMonthlyIncome) {
       score += 10;
       knownFactors.push('Lean-month stress cash flow baseline captured');
     } else {
@@ -96,15 +109,15 @@ export function evaluateQuestionnaireConfidence(
   }
 
   // Existing debt & bounce clarity
-  if (answers.hasBounce !== undefined) {
+  if (hasBounce !== undefined) {
     score += 5;
-    knownFactors.push(answers.hasBounce ? 'Recent payment bounce recorded' : 'Clean 6-month repayment track record');
+    knownFactors.push(hasBounce ? 'Recent payment bounce recorded' : 'Clean 6-month repayment track record');
   } else {
     missingFactors.push('Recent cheque/NACH bounce history unconfirmed');
   }
 
   // Emergency Buffer
-  if (answers.emergencySavingsMonths && answers.emergencySavingsMonths !== 'unknown') {
+  if (emergencySavingsMonths && emergencySavingsMonths !== 'unknown') {
     score += 5;
     knownFactors.push('Emergency liquidity cushion documented');
   } else {

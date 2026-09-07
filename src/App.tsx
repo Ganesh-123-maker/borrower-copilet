@@ -4,7 +4,7 @@
  * Architecture Note: Client-side routing with separation of presentation & domain logic.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Header, PageId } from './components/Header';
 import { Footer } from './components/Footer';
 import { LandingPage } from './pages/LandingPage';
@@ -12,7 +12,6 @@ import { QuestionnairePage } from './pages/QuestionnairePage';
 import { ResultsPage } from './pages/ResultsPage';
 import { NegotiationCardPage } from './pages/NegotiationCardPage';
 import { BorrowerInput } from './types';
-import { PERSONA_INPUTS } from './data';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageId>('landing');

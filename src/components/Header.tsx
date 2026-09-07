@@ -4,7 +4,6 @@
  */
 
 import React from 'react';
-import { Shield, Sparkles } from 'lucide-react';
 
 export type PageId = 'landing' | 'questionnaire' | 'results' | 'negotiation';
 

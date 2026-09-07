@@ -484,7 +484,7 @@ export function evaluateAPRConfidence(
  * Depends on income, existing obligations, living expenses, rate assumptions.
  */
 export function evaluateEMICeilingConfidence(
-  input: BorrowerInput,
+  _input: BorrowerInput,
   quality: InputQualityMap
 ): OutputConfidence {
   let score = 35;
@@ -545,7 +545,7 @@ export function evaluateEMICeilingConfidence(
  * Identifies the exact stress assumption (e.g. 20% income fall).
  */
 export function evaluateStressCaseConfidence(
-  input: BorrowerInput,
+  _input: BorrowerInput,
   quality: InputQualityMap
 ): OutputConfidence {
   let score = 40;

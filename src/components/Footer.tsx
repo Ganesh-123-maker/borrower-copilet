@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ShieldCheck, EyeOff, Lock, HeartHandshake } from 'lucide-react';
+import { ShieldCheck, EyeOff, Lock } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (

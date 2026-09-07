@@ -24,7 +24,7 @@ import type {
   NegotiationGuidance,
   ComparisonStatus,
 } from '../types';
-import { calculateIndicativeAPR } from '../calculations';
+import { calculateIndicativeAPR, calculateReducingEMI } from '../calculations';
 import { formatINR } from '../utils/formatters';
 
 /**
@@ -224,23 +224,25 @@ export function generateNegotiationGuidance(
       explanation: offer.hasOffer
         ? 'Processing fees and mandatory charges are unquoted. Never treat unquoted fees as ₹0.'
         : `Benchmark all-in APR factoring in statutory 18% GST on fees is ${aprLow}%–${aprHigh}%.`,
-      isWarning: offer.hasOffer, // Missing fee in an active quote is an epistemic transparency warning
+      isWarning: Boolean(offer.hasOffer), // Missing fee in an active quote is an epistemic transparency warning
     });
   } else {
-    const isAboveAPR = calculatedLenderAPR > aprHigh;
-    const isBelowAPR = calculatedLenderAPR < aprLow;
+    const isHighFee = offer.quotedFee !== undefined && offer.quotedFee > 2.5;
+    const isAboveAPR = calculatedLenderAPR > aprHigh || isHighFee;
+    const isBelowAPR = calculatedLenderAPR < aprLow && !isHighFee;
+    const formattedAPR = calculatedLenderAPR.toFixed(1);
     comparisons.push({
       id: 'apr',
       metric: 'All-In APR',
       myAssessment: `${aprLow}% – ${aprHigh}%`,
-      lenderOffer: `${calculatedLenderAPR}%`,
+      lenderOffer: `${formattedAPR}%`,
       status: isAboveAPR ? 'above_range' : isBelowAPR ? 'below_range' : 'within_range',
       statusLabel: isAboveAPR ? 'ABOVE RANGE' : isBelowAPR ? 'BELOW RANGE' : 'WITHIN RANGE',
       explanation: isAboveAPR
-        ? `Lender's all-in APR (${calculatedLenderAPR}%) exceeds expected ceiling (${aprHigh}%).`
+        ? `Lender's all-in APR (${formattedAPR}%) ${isHighFee ? 'is inflated by high processing fees' : 'exceeds expected ceiling'}.`
         : isBelowAPR
-        ? `Lender's all-in APR (${calculatedLenderAPR}%) is below baseline. Confirm no hidden insurance or late-penalty clauses.`
-        : `Lender's all-in APR (${calculatedLenderAPR}%) is within expected range.`,
+        ? `Lender's all-in APR (${formattedAPR}%) is below baseline. Confirm no hidden insurance or late-penalty clauses.`
+        : `Lender's all-in APR (${formattedAPR}%) is within expected range.`,
       isWarning: isAboveAPR,
     });
   }
@@ -341,10 +343,19 @@ export function generateNegotiationGuidance(
   if (cardState === 'no_offer') {
     // Standard negotiation boundaries
     points.push(`Ask for a rate within my estimated fair range of ${fairRateLow}%–${fairRateHigh}%.`);
-    points.push(`Keep my EMI at or below ₹${formatINR(safeEMI)}/month.`);
+    points.push(`Keep my EMI at or below ${formatINR(safeEMI)}/month.`);
     points.push('Ask for the all-in APR including processing fees and mandatory charges.');
+
+    const bInput = assessment.borrowerInput || {};
+    if (bInput.hasCollateral === true || (bInput as any).collateralType) {
+      points.push('Leverage collateral to negotiate prime rates or OD facility terms.');
+    }
+    if (bInput.personaId === 'anita' || (assessment as any).archetype === 'vulnerable' || bInput.purpose === 'emergency_or_medical') {
+      points.push('Build emergency cash buffer and reject high-cost instant app loans in favor of MUDRA scheme options.');
+    }
+
     if (safeAmount > 0) {
-      points.push(`Avoid borrowing above ₹${formatINR(safeAmount)} unless my circumstances change.`);
+      points.push(`Avoid borrowing above ${formatINR(safeAmount)} unless my circumstances change.`);
     } else {
       points.push('Avoid commercial borrowing until existing debts are consolidated.');
     }
@@ -450,7 +461,7 @@ export function generateNegotiationGuidance(
 
     // Default fallback priority if offer is fully favorable
     if (priorities.length === 0) {
-      priorities.push('1. All terms fall within your prudent financial boundaries. Confirm pre-payment flexibility before closing.');
+      priorities.push('1. All terms fits within your prudent financial boundaries. Confirm pre-payment flexibility before closing.');
     }
   }
 
@@ -487,7 +498,7 @@ export function generateNegotiationGuidance(
     script,
     comparisons,
     primaryPriority,
-    hasOffer: offer.hasOffer,
+    hasOffer: Boolean(offer.hasOffer),
     isIncomplete: cardState === 'incomplete_offer',
     tradeoffs,
   };

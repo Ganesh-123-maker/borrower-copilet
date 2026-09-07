@@ -17,7 +17,7 @@ import { HelpCircle, AlertCircle, Sparkles } from 'lucide-react';
 interface QuestionCardProps {
   question: QuestionDefinition;
   value: any;
-  answers: QuestionnaireAnswers;
+  answers?: QuestionnaireAnswers;
   error?: string;
   onChange: (questionId: string, value: any) => void;
 }
@@ -25,7 +25,6 @@ interface QuestionCardProps {
 export const QuestionCard: React.FC<QuestionCardProps> = ({
   question,
   value,
-  answers,
   error,
   onChange,
 }) => {

@@ -36,7 +36,6 @@ import type {
   AssessmentOutput,
   BorrowerInput,
   ConfidenceLevel,
-  StressCaseDetail,
   TenureOption,
   VerdictStatus,
 } from '../types';
@@ -511,9 +510,13 @@ export function step6_allInAPR(
   const isFeeKnown = profile.quotedFee.quality === 'known';
   const gst = FEE_AND_TAX_RULES.gstRateOnFinancialServices.value;
 
+  // Benchmark processing fee (1.0% to 2.5%) for fair all-in APR baseline
+  const benchmarkFeeMin = 1.0;
+  const benchmarkFeeMax = 2.5;
+  const aprMin = calculateIndicativeAPR(fairRate.min, benchmarkFeeMin, gst);
+  const aprMax = calculateIndicativeAPR(fairRate.max, benchmarkFeeMax, gst);
+
   if (isFeeKnown && quotedFee !== undefined) {
-    const aprMin = calculateIndicativeAPR(fairRate.min, quotedFee, gst);
-    const aprMax = calculateIndicativeAPR(fairRate.max, quotedFee, gst);
     return {
       min: aprMin,
       max: aprMax,
@@ -523,18 +526,12 @@ export function step6_allInAPR(
     };
   }
 
-  // Estimated processing fee benchmark (1.0% to 2.5%)
-  const benchmarkFeeMin = 1.0;
-  const benchmarkFeeMax = 2.5;
-  const aprMin = calculateIndicativeAPR(fairRate.min, benchmarkFeeMin, gst);
-  const aprMax = calculateIndicativeAPR(fairRate.max, benchmarkFeeMax, gst);
-
   return {
     min: aprMin,
     max: aprMax,
     status: 'estimated',
     estimatedFeesPercent: FEE_AND_TAX_RULES.defaultProcessingFeePercent.value,
-    explanation: `APR is estimated (interest rate plus benchmark 1.0%–2.5% processing fee + ${gst}% GST). Processing fee schedule is unverified.`,
+    explanation: `Benchmark APR range incorporates estimated processing fees (1.0%–2.5%) + ${gst}% GST.`,
   };
 }
 
@@ -605,7 +602,7 @@ export function step8_tenureTradeoffs(
 // ============================================================================
 
 export function step9_stressTest(
-  profile: NormalizedBorrowerProfile,
+  _profile: NormalizedBorrowerProfile,
   affordability: AffordabilityAnalysis,
   actualEMI: number
 ): StressTestResult {
@@ -654,7 +651,7 @@ export function step10_verdict(
   profile: NormalizedBorrowerProfile,
   borrowerSafe: BorrowerSafeEstimate,
   lenderSanction: LenderSanctionEstimate,
-  stress: StressTestResult,
+  _stress: StressTestResult,
   affordability: AffordabilityAnalysis
 ): VerdictResult {
   const requested = profile.amountRequested.value;
@@ -994,6 +991,7 @@ export function runBorrowerEvaluationPipeline(input: BorrowerInput): AssessmentO
     personaId: input.personaId,
     personaName: profile.name,
     borrowerInput: input,
+    negotiation: undefined as any,
   };
 
   // Generate deterministic negotiation guidance based on assessment

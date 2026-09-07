@@ -6,15 +6,11 @@
  */
 
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, RotateCcw, UserCheck, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { PageId } from '../components/Header';
 import { BorrowerInput } from '../types';
 import { PERSONA_INPUTS } from '../data';
 import { QuestionnaireAnswers } from '../questionnaire/types';
-import {
-  QUESTIONNAIRE_STEPS,
-  QUESTION_DEFINITIONS,
-} from '../questionnaire/questions';
 import {
   getActiveQuestionsForStep,
   getActiveSteps,
@@ -34,7 +30,7 @@ interface QuestionnairePageProps {
 }
 
 const DEFAULT_BLANK_ANSWERS: QuestionnaireAnswers = {
-  purpose: 'personal_loan' as any,
+  purpose: undefined,
   loanType: 'personal_loan',
   amountRequested: 500000,
   tenureWantedMonths: 36,

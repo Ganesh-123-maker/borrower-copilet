@@ -7,21 +7,13 @@
 
 import React, { useState } from 'react';
 import {
-  ArrowLeft,
   ArrowRight,
-  ShieldCheck,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   HelpCircle,
-  TrendingDown,
-  TrendingUp,
-  Percent,
-  Calendar,
-  Layers,
   ChevronDown,
   ChevronUp,
-  Sliders,
   Sparkles,
   Info,
   RefreshCw,
@@ -33,9 +25,9 @@ import { PageId } from '../components/Header';
 import { AssessmentOutput, BorrowerInput } from '../types';
 import { evaluateBorrowerRules } from '../rules';
 import { PERSONA_INPUTS } from '../data';
-import { formatINR, formatPercent } from '../utils/formatters';
+import { formatINR } from '../utils/formatters';
 import { NegotiationCard } from '../components/NegotiationCard';
-import { runSanityCheck, TestResult } from '../tests';
+import { runSanityCheck } from '../tests';
 
 interface ResultsPageProps {
   onNavigate: (page: PageId) => void;
@@ -100,11 +92,13 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
     }
     const target = PERSONA_INPUTS[id];
     if (target) {
-      setEditAmount(target.amountRequested);
-      setEditIncome(target.monthlyNetIncome);
-      setEditEMI(target.existingMonthlyEMIs);
-      setEditTenure(target.tenureWantedMonths);
+      setEditAmount(target.amountRequested ?? 500000);
+      setEditIncome(target.monthlyNetIncome ?? 50000);
+      setEditEMI(target.existingMonthlyEMIs ?? 0);
+      setEditTenure(target.tenureWantedMonths ?? 36);
     }
+    // Close the quick-edit drawer so stale fields aren't shown for the new persona
+    setIsQuickEditOpen(false);
   };
 
   // Visual verdict styling config
@@ -614,7 +608,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
               {/* Tenure Trade-off Cards */}
               <div className="space-y-2 mb-4">
                 <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold block mb-1">
-                  Tenure Trade-Off Options (Principal: {formatINR(assessment.borrowerSafeAmount.max > 0 ? assessment.borrowerSafeAmount.max : currentInput.amountRequested)})
+                  Tenure Trade-Off Options (Principal: {formatINR(assessment.borrowerSafeAmount.max > 0 ? assessment.borrowerSafeAmount.max : (currentInput.amountRequested ?? 500000))})
                 </span>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
@@ -947,15 +941,19 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  ✓
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+                  auditData.passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                }`}>
+                  {auditData.passed ? '✓' : '✗'}
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-base">
                     System Audit & Uncertainty Test Harness
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {auditData.results.length} automated tests • All 4 core suites verified
+                    {auditData.results.length} automated tests •{' '}
+                    {auditData.results.filter(r => r.passed).length} passed,{' '}
+                    {auditData.results.filter(r => !r.passed).length} failed
                   </p>
                 </div>
               </div>
@@ -971,17 +969,31 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
             {/* Test Results Scrollable Body */}
             <div className="p-6 overflow-y-auto space-y-6 text-xs">
               {/* Overall status banner */}
-              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between">
+              <div className={`p-3.5 rounded-xl flex items-center justify-between ${
+                auditData.passed
+                  ? 'bg-emerald-50 border border-emerald-200/80'
+                  : 'bg-rose-50 border border-rose-200/80'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="font-semibold text-emerald-900">
-                    System Integrity Verified: All {auditData.results.length} tests passed successfully
+                  {auditData.passed ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span className={`font-semibold ${
+                    auditData.passed ? 'text-emerald-900' : 'text-rose-900'
+                  }`}>
+                    {auditData.passed
+                      ? `System Integrity Verified: All ${auditData.results.length} tests passed successfully`
+                      : `${auditData.results.filter(r => !r.passed).length} test(s) failed — review details below`}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleRunAudit}
-                  className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer"
+                  className={`inline-flex items-center gap-1 font-mono text-[11px] font-bold underline cursor-pointer ${
+                    auditData.passed ? 'text-emerald-700 hover:text-emerald-900' : 'text-rose-700 hover:text-rose-900'
+                  }`}
                 >
                   <RefreshCw className="w-3 h-3" /> Re-run
                 </button>
@@ -1017,8 +1029,12 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                               </span>
                             )}
                           </div>
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase shrink-0">
-                            PASS
+                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase shrink-0 ${
+                            test.passed
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {test.passed ? 'PASS' : 'FAIL'}
                           </span>
                         </div>
                       ))}

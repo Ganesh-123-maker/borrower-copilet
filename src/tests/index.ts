@@ -9,7 +9,7 @@
  * @description Test harness for Borrower Copilot rules, calculations, and benchmark personas.
  */
 
-import { calculateReducingEMI, calculateIndicativeAPR, calculatePrincipalFromEMI, calculateTenureTradeoffs } from '../calculations';
+import { calculateReducingEMI, calculateIndicativeAPR } from '../calculations';
 import {
   evaluateBorrowerRules,
   step1_normalize,
@@ -18,12 +18,8 @@ import {
   step4_borrowerSafeAmount,
   step5_fairRateBand,
   step6_allInAPR,
-  step7_emi,
   step8_tenureTradeoffs,
   step9_stressTest,
-  step10_verdict,
-  FOIR_RULES,
-  FAIR_RATE_ASSUMPTIONS,
   generateNegotiationGuidance,
 } from '../rules';
 import { PERSONA_INPUTS } from '../data';
@@ -396,13 +392,13 @@ export function runSanityCheck(): { passed: boolean; results: TestResult[] } {
     sc2Input.creditScore === undefined &&
     sc2RateSpread >= 4.0 && // Spread widened to >= 4.0%
     sc2Output.fairRateBand.min < 15.0 && // NOT priced as default/300 subprime
-    sc2Output.granularConfidence?.fairRateBand.rangeWidened === true &&
+    sc2Output.granularConfidence?.fairRateBand?.rangeWidened === true &&
     sc2Output.missingInformation?.some((m) => m.toLowerCase().includes('credit')) === true;
   results.push({
     suite: 'Confidence & Uncertainty',
     name: 'Scenario 2: Unknown Credit Score (Widened Spread, Not Coerced to Zero)',
     passed: sc2Passed,
-    details: `Rate: ${sc2Output.fairRateBand.min}%–${sc2Output.fairRateBand.max}% (Spread: ${sc2RateSpread.toFixed(1)}%), RangeWidened: ${sc2Output.granularConfidence?.fairRateBand.rangeWidened}`,
+    details: `Rate: ${sc2Output.fairRateBand.min}%–${sc2Output.fairRateBand.max}% (Spread: ${sc2RateSpread.toFixed(1)}%), RangeWidened: ${sc2Output.granularConfidence?.fairRateBand?.rangeWidened}`,
   });
 
   // SCENARIO 3: Unknown Expenses (Safe Amount Range Widened)
@@ -421,13 +417,13 @@ export function runSanityCheck(): { passed: boolean; results: TestResult[] } {
   const sc3SafeMinRatio = sc3Output.borrowerSafeAmount.min / (sc3Output.borrowerSafeAmount.max || 1);
   const sc3Passed =
     sc3SafeMinRatio <= 0.75 && // Range widened (min is ~68% of max instead of 88%)
-    sc3Output.granularConfidence?.borrowerSafeAmount.rangeWidened === true &&
+    sc3Output.granularConfidence?.borrowerSafeAmount?.rangeWidened === true &&
     sc3Output.missingInformation?.some((m) => m.toLowerCase().includes('expense')) === true;
   results.push({
     suite: 'Confidence & Uncertainty',
     name: 'Scenario 3: Unknown Expenses (Widened Safe Amount Range)',
     passed: sc3Passed,
-    details: `Safe Min/Max: ₹${sc3Output.borrowerSafeAmount.min} / ₹${sc3Output.borrowerSafeAmount.max} (Ratio: ${(sc3SafeMinRatio * 100).toFixed(0)}%), RangeWidened: ${sc3Output.granularConfidence?.borrowerSafeAmount.rangeWidened}`,
+    details: `Safe Min/Max: ₹${sc3Output.borrowerSafeAmount.min} / ₹${sc3Output.borrowerSafeAmount.max} (Ratio: ${(sc3SafeMinRatio * 100).toFixed(0)}%), RangeWidened: ${sc3Output.granularConfidence?.borrowerSafeAmount?.rangeWidened}`,
   });
 
   // SCENARIO 4: Variable Income (Anita Benchmark vs Salaried)
@@ -547,7 +543,7 @@ export function runSanityCheck(): { passed: boolean; results: TestResult[] } {
   const anitaConf = evaluateBorrowerRules(PERSONA_INPUTS.anita);
   const sc8Passed =
     priyaConf.confidence === 'high' &&
-    priyaConf.granularConfidence?.verdict.level === 'high' &&
+    priyaConf.granularConfidence?.verdict?.level === 'high' &&
     raviConf.confidence === 'moderate' &&
     anitaConf.confidence === 'indicative';
   results.push({
@@ -1377,10 +1373,11 @@ export function runSanityCheck(): { passed: boolean; results: TestResult[] } {
   const unkGuidance = generateNegotiationGuidance(baseAss, unknownFeeOffer);
   const zeroAprRow = zeroGuidance.comparisons.find((c) => c.id === 'apr');
   const unkAprRow = unkGuidance.comparisons.find((c) => c.id === 'apr');
-  const p6Test14Passed =
+  const p6Test14Passed = Boolean(
     zeroAprRow?.lenderOffer.includes('12.0%') &&
     unkAprRow?.status === 'unknown' &&
-    unkAprRow?.lenderOffer.includes('Unknown');
+    unkAprRow?.lenderOffer.includes('Unknown')
+  );
   results.push({
     suite: 'Phase 6: Negotiation Card',
     name: '14. Unknown vs Zero Fees Distinction (Never Coerced to 0%)',
@@ -1390,5 +1387,26 @@ export function runSanityCheck(): { passed: boolean; results: TestResult[] } {
 
   const allPassed = results.every((r) => r.passed);
   return { passed: allPassed, results };
+}
+
+// Auto-run if executed directly via CLI
+if (typeof process !== 'undefined' && process.argv && process.argv[1]?.includes('tests')) {
+  const { passed, results } = runSanityCheck();
+  console.log(`\n=== BORROWER COPILOT TEST SUITE: ${results.length} TESTS ===`);
+  const suites = Array.from(new Set(results.map((r) => r.suite)));
+  for (const suite of suites) {
+    const suiteTests = results.filter((r) => r.suite === suite);
+    const passedCount = suiteTests.filter((r) => r.passed).length;
+    console.log(`✓ [${suite}] ${passedCount}/${suiteTests.length} PASSED`);
+  }
+  const failed = results.filter((r) => !r.passed);
+  if (!passed || failed.length > 0) {
+    console.error(`\nFAILED (${failed.length}/${results.length} tests):`);
+    failed.forEach((f) => console.error(`  ✕ [${f.suite}] ${f.name}: ${f.details}`));
+    process.exit(1);
+  } else {
+    console.log(`\nALL ${results.length} TESTS PASSED SUCCESSFULLY.\n`);
+    process.exit(0);
+  }
 }
 

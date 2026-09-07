@@ -5,7 +5,7 @@
  * Architecture Note: Zero React/JSX dependency.
  */
 
-import { BorrowerInput, DataPoint, RangePoint } from '../types';
+import { BorrowerInput } from '../types';
 import { QUESTION_DEFINITIONS, QUESTIONNAIRE_STEPS } from './questions';
 import {
   QuestionDefinition,
@@ -13,11 +13,14 @@ import {
   StepDefinition,
 } from './types';
 
-function unwrap<T>(point?: DataPoint<T> | RangePoint<T>): T | undefined {
-  if (!point) return undefined;
-  if (point.status === 'known') return point.value;
-  if (point.status === 'range') return ((point.min as any as number) + (point.max as any as number)) / 2 as any as T;
-  return undefined;
+export function unwrap<T>(point?: any): T | undefined {
+  if (point === undefined || point === null || point === '') return undefined;
+  if (typeof point === 'object' && point !== null && 'status' in point) {
+    if (point.status === 'known') return point.value;
+    if (point.status === 'range') return (((point.min as number) + (point.max as number)) / 2) as any as T;
+    return undefined;
+  }
+  return point as T;
 }
 
 /**
@@ -105,22 +108,27 @@ export function cleanIrrelevantAnswers(
     }
   }
 
+  const isValueFalse = (val: any) =>
+    val === false || (typeof val === 'object' && val !== null && val.status === 'known' && val.value === false);
+  const isValueNo = (val: any) =>
+    val === 'no' || (typeof val === 'object' && val !== null && val.status === 'known' && val.value === 'no');
+
   // Handle explicit unknown overrides
-  if (answers.creditScoreKnown?.status === 'known' && answers.creditScoreKnown.value === false) {
+  if (isValueFalse(answers.creditScoreKnown)) {
     cleaned.creditScore = undefined;
   }
 
-  if (answers.hasCoapplicant?.status === 'known' && answers.hasCoapplicant.value === false) {
+  if (isValueFalse(answers.hasCoapplicant)) {
     cleaned.spouseIncome = undefined;
   }
 
-  if (answers.hasCollateral?.status === 'known' && answers.hasCollateral.value === false) {
+  if (isValueFalse(answers.hasCollateral)) {
     cleaned.collateralType = undefined;
     cleaned.collateralValue = undefined;
     cleaned.collateralDescription = undefined;
   }
 
-  if (answers.hasLenderOffer?.status === 'known' && answers.hasLenderOffer.value === 'no') {
+  if (isValueNo(answers.hasLenderOffer)) {
     cleaned.quotedRate = undefined;
     cleaned.quotedFee = undefined;
     cleaned.quotedEMI = undefined;
@@ -174,8 +182,9 @@ export function mapAnswersToBorrowerInput(
 ): BorrowerInput {
   const answers = cleanIrrelevantAnswers(rawAnswers);
 
-  let collateralDesc = unwrap(answers.collateralDescription);
-  if (unwrap(answers.hasCollateral) && unwrap(answers.collateralType) && !collateralDesc) {
+  let collateralDesc = unwrap<string>(answers.collateralDescription);
+  const colType = unwrap<string>(answers.collateralType);
+  if (unwrap<boolean>(answers.hasCollateral) && colType && !collateralDesc) {
     const typeNames: Record<string, string> = {
       commercial_shop: 'Commercial shop / office premises',
       residential_property: 'Residential house / plot',
@@ -183,7 +192,7 @@ export function mapAnswersToBorrowerInput(
       gold: 'Physical gold jewellery',
       other: 'Financial asset or property',
     };
-    collateralDesc = typeNames[unwrap(answers.collateralType)!] || 'Pledged collateral asset';
+    collateralDesc = typeNames[colType] || 'Pledged collateral asset';
   }
 
   const borrowerInput: BorrowerInput = {
@@ -234,63 +243,59 @@ export function mapAnswersToBorrowerInput(
 export function mapBorrowerInputToAnswers(
   input: BorrowerInput
 ): QuestionnaireAnswers {
-  const wrap = <T>(val: T | undefined): DataPoint<T> | undefined => val !== undefined ? { status: 'known', value: val } : undefined;
-
   const answers: QuestionnaireAnswers = {
     personaId: input.personaId,
     name: input.name,
-    age: wrap(input.age),
-    purpose: wrap(input.purpose),
-    loanType: wrap(input.loanType),
-    amountRequested: wrap(input.amountRequested),
-    tenureWantedMonths: wrap(input.tenureWantedMonths || 36),
-    employmentType: wrap(input.employmentType),
-    monthlyNetIncome: wrap(input.monthlyNetIncome),
-    incomeStability: wrap(
+    age: input.age,
+    purpose: input.purpose,
+    loanType: input.loanType,
+    amountRequested: input.amountRequested,
+    tenureWantedMonths: input.tenureWantedMonths || 36,
+    employmentType: input.employmentType,
+    monthlyNetIncome: input.monthlyNetIncome,
+    incomeStability:
       input.employmentType === 'salaried_corporate'
         ? 'very_stable'
         : input.employmentType === 'informal_or_gig'
         ? 'variable'
-        : 'moderately_stable'
-    ),
-    existingMonthlyEMIs: wrap(input.existingMonthlyEMIs),
-    householdExpenses: wrap(input.householdExpenses),
-    creditScoreKnown: wrap(input.creditScoreKnown !== false && input.creditScore !== undefined),
-    creditScore: wrap(input.creditScore),
-    hasCoapplicant: wrap((input.spouseIncome || 0) > 0),
-    spouseIncome: wrap(input.spouseIncome),
-    hasCollateral: wrap(input.hasCollateral || false),
-    collateralValue: wrap(input.collateralValue),
-    collateralDescription: wrap(input.collateralDescription),
-    hasAppLoans: wrap(input.hasAppLoans || false),
-    hasBounce: wrap(input.hasBounce || false),
-    hasExistingLoans: wrap((input.existingMonthlyEMIs || 0) > 0),
-    hasLenderOffer: wrap(
+        : 'moderately_stable',
+    existingMonthlyEMIs: input.existingMonthlyEMIs || 0,
+    householdExpenses: input.householdExpenses,
+    creditScoreKnown: input.creditScoreKnown !== false && input.creditScore !== undefined,
+    creditScore: input.creditScore,
+    hasCoapplicant: (input.spouseIncome || 0) > 0,
+    spouseIncome: input.spouseIncome,
+    hasCollateral: input.hasCollateral || false,
+    collateralValue: input.collateralValue,
+    collateralDescription: input.collateralDescription,
+    hasAppLoans: input.hasAppLoans || false,
+    hasBounce: input.hasBounce || false,
+    hasExistingLoans: (input.existingMonthlyEMIs || 0) > 0,
+    hasLenderOffer:
       input.hasLenderOffer || input.quotedRate !== undefined || input.lenderOffer?.hasOffer
         ? 'yes'
-        : 'no'
-    ),
-    quotedAmount: wrap(input.quotedAmount ?? input.lenderOffer?.quotedAmount),
-    quotedRate: wrap(input.quotedRate ?? input.lenderOffer?.quotedRate),
-    quotedFee: wrap(input.quotedFee ?? input.lenderOffer?.quotedFee),
-    quotedTenure: wrap(input.quotedTenure ?? input.lenderOffer?.quotedTenure),
-    quotedEMI: wrap(input.quotedEMI ?? input.lenderOffer?.quotedEMI),
-    quotedOtherCharges: wrap(input.quotedOtherCharges ?? input.lenderOffer?.quotedOtherCharges),
+        : 'no',
+    quotedAmount: input.quotedAmount ?? input.lenderOffer?.quotedAmount,
+    quotedRate: input.quotedRate ?? input.lenderOffer?.quotedRate,
+    quotedFee: input.quotedFee ?? input.lenderOffer?.quotedFee,
+    quotedTenure: input.quotedTenure ?? input.lenderOffer?.quotedTenure,
+    quotedEMI: input.quotedEMI ?? input.lenderOffer?.quotedEMI,
+    quotedOtherCharges: input.quotedOtherCharges ?? input.lenderOffer?.quotedOtherCharges,
   };
 
   // Specific persona enrichments
   if (input.personaId === 'priya') {
-    answers.yearsAtEmployer = { status: 'known', value: 'more_than_3_yrs' };
-    answers.emergencySavingsMonths = { status: 'known', value: '3_to_6_mo' };
+    answers.yearsAtEmployer = 'more_than_3_yrs';
+    answers.emergencySavingsMonths = '3_to_6_mo';
   } else if (input.personaId === 'ravi') {
-    answers.businessVintageYears = { status: 'known', value: 'more_than_5_yrs' };
-    answers.documentedAnnualIncome = { status: 'known', value: 420000 };
-    answers.collateralType = { status: 'known', value: 'commercial_shop' };
-    answers.emergencySavingsMonths = { status: 'known', value: '1_to_3_mo' };
+    answers.businessVintageYears = 'more_than_5_yrs';
+    answers.documentedAnnualIncome = 420000;
+    answers.collateralType = 'commercial_shop';
+    answers.emergencySavingsMonths = '1_to_3_mo';
   } else if (input.personaId === 'anita') {
-    answers.lowestMonthlyIncome = { status: 'known', value: 22000 };
-    answers.incomeSourceCount = { status: 'known', value: '2_to_3_sources' };
-    answers.emergencySavingsMonths = { status: 'known', value: 'less_than_1_mo' };
+    answers.lowestMonthlyIncome = 22000;
+    answers.incomeSourceCount = '2_to_3_sources';
+    answers.emergencySavingsMonths = 'less_than_1_mo';
   }
 
   return answers;

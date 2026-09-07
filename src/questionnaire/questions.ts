@@ -478,7 +478,7 @@ export const QUESTION_DEFINITIONS: QuestionDefinition[] = [
     type: 'yes_no',
     required: false,
     isMust: false,
-    condition: (answers) => (answers.existingMonthlyEMIs || 0) > 0,
+    condition: (answers) => Number(answers.existingMonthlyEMIs || 0) > 0,
     affects: ['confidence'],
     confidenceImpact: 'low',
   },
@@ -508,7 +508,7 @@ export const QUESTION_DEFINITIONS: QuestionDefinition[] = [
     condition: (answers) =>
       answers.employmentType === 'informal_or_gig' ||
       answers.loanType === 'digital_micro_loan' ||
-      (answers.existingMonthlyEMIs || 0) > 0,
+      Number(answers.existingMonthlyEMIs || 0) > 0,
     affects: ['verdict', 'fairRateBand', 'confidence'],
     confidenceImpact: 'high',
   },

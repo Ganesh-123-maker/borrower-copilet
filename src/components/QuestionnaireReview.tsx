@@ -14,8 +14,6 @@ import {
   ArrowRight,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  TrendingUp,
 } from 'lucide-react';
 
 interface QuestionnaireReviewProps {

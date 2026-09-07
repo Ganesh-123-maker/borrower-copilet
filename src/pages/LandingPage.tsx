@@ -15,12 +15,8 @@ import {
   TrendingDown,
   Percent,
   CalendarClock,
-  UserCheck,
 } from 'lucide-react';
-import { PageId } from '../components/Header';
-import { PRODUCT_COPY } from '../content/copy';
 import { EVALUATION_PERSONAS } from '../data';
-import { formatINR } from '../utils/formatters';
 
 interface LandingPageProps {
   onStartAssessment: () => void;
