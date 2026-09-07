@@ -27,6 +27,9 @@ import { evaluateBorrowerRules } from '../rules';
 import { PERSONA_INPUTS } from '../data';
 import { formatINR } from '../utils/formatters';
 import { NegotiationCard } from '../components/NegotiationCard';
+import { DebtRehabilitationRoadmapCard } from '../components/DebtRehabilitationRoadmapCard';
+import { evaluateDebtRehabilitationRoadmap } from '../rules/debtRoadmap';
+import { FlatRateConverterCard } from '../components/FlatRateConverterCard';
 import { runSanityCheck } from '../tests';
 
 interface ResultsPageProps {
@@ -52,6 +55,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
 
   // Run the core decoupled rules engine
   const assessment: AssessmentOutput = evaluateBorrowerRules(currentInput);
+  const debtPlan = evaluateDebtRehabilitationRoadmap(assessment, currentInput);
 
   // UI state for quick edit panel & explanations toggle
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
@@ -232,7 +236,15 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
             <button
               type="button"
               id="btn-toggle-quick-edit"
-              onClick={() => setIsQuickEditOpen(!isQuickEditOpen)}
+              onClick={() => {
+                if (!isQuickEditOpen) {
+                  setEditAmount(currentInput.amountRequested ?? 500000);
+                  setEditIncome(currentInput.monthlyNetIncome ?? 50000);
+                  setEditEMI(currentInput.existingMonthlyEMIs ?? 0);
+                  setEditTenure(currentInput.tenureWantedMonths ?? 36);
+                }
+                setIsQuickEditOpen(!isQuickEditOpen);
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
@@ -409,6 +421,11 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
               {renderConfidencePill(granular?.verdict)}
             </section>
 
+            {/* Debt Rehabilitation Roadmap Card (Triggered on 'dont_borrow' or severe debt distress) */}
+            {debtPlan.shouldDisplay && (
+              <DebtRehabilitationRoadmapCard plan={debtPlan} className="shadow-xs" />
+            )}
+
             {/* ========================================================================= */}
             {/* SECTION 2: HOW MUCH? (LENDER SANCTION VS BORROWER SAFE)                   */}
             {/* ========================================================================= */}
@@ -571,6 +588,13 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                 </span>
               </p>
             </section>
+
+            {/* Flat Rate vs Reducing Balance Conversion Tool */}
+            <FlatRateConverterCard
+              initialPrincipal={currentInput.amountRequested || 500000}
+              initialTenureMonths={currentInput.tenureWantedMonths || 36}
+              defaultFlatRate={currentInput.quotedRate || 8.0}
+            />
 
             {/* ========================================================================= */}
             {/* SECTION 4: SAFE EMI CEILING & TENURE TRADE-OFFS                           */}

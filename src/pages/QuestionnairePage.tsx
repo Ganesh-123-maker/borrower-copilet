@@ -26,6 +26,7 @@ import { QuestionnaireReview } from '../components/QuestionnaireReview';
 interface QuestionnairePageProps {
   onNavigate: (page: PageId) => void;
   initialPersonaId?: string;
+  onSelectPersona?: (personaId: string) => void;
   customInput?: BorrowerInput | null;
   onComplete?: (input: BorrowerInput) => void;
 }
@@ -52,6 +53,7 @@ const DEFAULT_BLANK_ANSWERS: QuestionnaireAnswers = {
 export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
   onNavigate,
   initialPersonaId,
+  onSelectPersona,
   customInput,
   onComplete,
 }) => {
@@ -160,6 +162,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
       setCurrentStepId('loan_goal');
       setMaxStepIndexReached(10);
       setValidationErrors({});
+      onSelectPersona?.(personaId);
     }
   };
 
