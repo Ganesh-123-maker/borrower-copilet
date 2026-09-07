@@ -75,6 +75,7 @@ export default function App() {
           <QuestionnairePage
             onNavigate={navigateTo}
             initialPersonaId={activePersonaId}
+            customInput={customInput}
             onComplete={(input) => {
               handleUpdateInput(input);
               navigateTo('results');

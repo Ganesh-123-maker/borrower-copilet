@@ -26,6 +26,7 @@ import { QuestionnaireReview } from '../components/QuestionnaireReview';
 interface QuestionnairePageProps {
   onNavigate: (page: PageId) => void;
   initialPersonaId?: string;
+  customInput?: BorrowerInput | null;
   onComplete?: (input: BorrowerInput) => void;
 }
 
@@ -51,10 +52,14 @@ const DEFAULT_BLANK_ANSWERS: QuestionnaireAnswers = {
 export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
   onNavigate,
   initialPersonaId,
+  customInput,
   onComplete,
 }) => {
   // Initialize questionnaire with persona answers if provided, else blank defaults
   const [answers, setAnswers] = useState<QuestionnaireAnswers>(() => {
+    if (customInput) {
+      return mapBorrowerInputToAnswers(customInput);
+    }
     if (initialPersonaId && PERSONA_INPUTS[initialPersonaId]) {
       return mapBorrowerInputToAnswers(PERSONA_INPUTS[initialPersonaId]);
     }
@@ -63,6 +68,12 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
 
   const [currentStepId, setCurrentStepId] = useState<string>('loan_goal');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [maxStepIndexReached, setMaxStepIndexReached] = useState<number>(() => {
+    if (customInput || (initialPersonaId && PERSONA_INPUTS[initialPersonaId])) {
+      return 10;
+    }
+    return 0;
+  });
 
   const activeSteps = getActiveSteps(answers);
   const currentStepIndex = activeSteps.findIndex((s) => s.id === currentStepId);
@@ -103,8 +114,12 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
 
     setValidationErrors({});
     if (currentStepIndex < activeSteps.length - 1) {
-      const nextStep = activeSteps[currentStepIndex + 1];
+      const nextIndex = currentStepIndex + 1;
+      const nextStep = activeSteps[nextIndex];
       setCurrentStepId(nextStep.id);
+      if (nextIndex > maxStepIndexReached) {
+        setMaxStepIndexReached(nextIndex);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -143,6 +158,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
     if (input) {
       setAnswers(mapBorrowerInputToAnswers(input));
       setCurrentStepId('loan_goal');
+      setMaxStepIndexReached(10);
       setValidationErrors({});
     }
   };
@@ -150,6 +166,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
   const handleResetBlank = () => {
     setAnswers(DEFAULT_BLANK_ANSWERS);
     setCurrentStepId('loan_goal');
+    setMaxStepIndexReached(0);
     setValidationErrors({});
   };
 
@@ -234,14 +251,14 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
         {/* Step Breadcrumbs (scrollable on mobile) */}
         <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 overflow-x-auto no-scrollbar text-xs">
           {activeSteps.map((step, idx) => {
-            const isPassed = idx < currentStepIndex;
+            const isPassed = idx <= maxStepIndexReached;
             const isCurrent = step.id === activeStep.id;
             return (
               <button
                 key={step.id}
                 type="button"
                 id={`step-tab-${step.id}`}
-                disabled={!isPassed && !isCurrent}
+                disabled={!isPassed}
                 onClick={() => isPassed && setCurrentStepId(step.id)}
                 className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-medium transition-all text-[11px] font-mono ${
                   isCurrent
@@ -306,15 +323,36 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
               <span>Back</span>
             </button>
 
-            <button
-              type="button"
-              id="btn-step-continue"
-              onClick={handleNext}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
-            >
-              <span>{currentStepIndex === activeSteps.length - 2 ? 'Review Answers' : 'Continue'}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {maxStepIndexReached >= activeSteps.length - 1 && activeStep.id !== 'review' && (
+                <button
+                  type="button"
+                  id="btn-return-to-review"
+                  onClick={() => {
+                    const { valid, errors } = validateStep(activeStep.id, answers);
+                    if (!valid) {
+                      setValidationErrors(errors);
+                      return;
+                    }
+                    handleJumpToStep('review');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  <span>Return to Review</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                id="btn-step-continue"
+                onClick={handleNext}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+              >
+                <span>{currentStepIndex === activeSteps.length - 2 ? 'Review Answers' : 'Continue'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
